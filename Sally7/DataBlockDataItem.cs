@@ -10,7 +10,7 @@ namespace Sally7
     {
         private readonly ConvertToS7<TValue> _toS7Converter;
         private readonly ConvertFromS7<TValue> _fromS7Converter;
-        private TValue? _value;
+        protected TValue? _value;
 
         public DataBlockDataItem(BigEndianShort dbNumber, int startByte, int length = 1) : this(dbNumber, startByte, 0,
             length)
@@ -75,8 +75,29 @@ namespace Sally7
         public TransportSize TransportSize { get; }
         public VariableType VariableType { get; }
 
-        int IDataItem.WriteValue(Span<byte> output) => _toS7Converter.Invoke(Value, Length, output);
+        int IDataItem.WriteValue(Span<byte> output) => WriteValue(output);
+        void IDataItem.ReadValue(ReadOnlySpan<byte> input) => ReadValue(input);
 
-        void IDataItem.ReadValue(ReadOnlySpan<byte> input) => _fromS7Converter.Invoke(ref _value, input, Length);
+        protected virtual int WriteValue(Span<byte> output) => _toS7Converter.Invoke(Value, Length, output);
+        protected virtual void ReadValue(ReadOnlySpan<byte> input) => _fromS7Converter.Invoke(ref _value, input, Length);
     }
+
+#if NET7_0_OR_GREATER
+    public sealed class DataBlockDataItem<TValue, TValueConverter> : DataBlockDataItem<TValue>
+        where TValueConverter : IValueConverter<TValue>
+    {
+        public DataBlockDataItem(BigEndianShort dbNumber, int startByte, int length = 1)
+            : base(dbNumber, startByte, 0, length)
+        {
+        }
+
+        public DataBlockDataItem(BigEndianShort dbNumber, int startByte, int bit, int length = 1)
+            : base(dbNumber, startByte, bit, length)
+        {
+        }
+
+        protected override int WriteValue(Span<byte> output) => TValueConverter.ToS7(Value, Length, output);
+        protected override void ReadValue(ReadOnlySpan<byte> input) => TValueConverter.FromS7(ref _value, input, Length);
+    }
+#endif
 }

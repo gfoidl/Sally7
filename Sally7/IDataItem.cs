@@ -1,6 +1,7 @@
 ﻿using System;
 using Sally7.Protocol;
 using Sally7.Protocol.S7;
+using Sally7.ValueConversion;
 
 namespace Sally7
 {
@@ -22,4 +23,11 @@ namespace Sally7
     {
         TValue? Value { get; set; }
     }
+
+#if NET7_0_OR_GREATER
+    public interface IDataItem<TValue, TValueConverter> : IDataItem<TValue>
+        where TValueConverter : IValueConverter<TValue>
+    {
+    }
+#endif
 }
